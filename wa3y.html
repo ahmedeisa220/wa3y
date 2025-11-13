@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>واعى - تطبيق ضبط النفس المتقدم</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- خط Cairo لدعم اللغة العربية -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f7f9fc;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6">
+
+    <div id="app" class="max-w-4xl mx-auto">
+        <!-- العنوان الرئيسي -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl font-extrabold text-blue-800 mb-2 shadow-sm">واعى</h1>
+            <p class="text-gray-600 text-lg">تحكم في عاداتك والتزم بقراراتك المالية.</p>
+        </header>
+
+        <!-- حالة التحميل -->
+        <div id="loading-state" class="text-center p-6 bg-white rounded-xl shadow-lg mb-8" style="display: none;">
+            <div class="flex items-center justify-center space-x-2 space-x-reverse">
+                <div class="w-4 h-4 rounded-full animate-pulse bg-blue-500"></div>
+                <div class="w-4 h-4 rounded-full animate-pulse bg-blue-500 delay-150"></div>
+                <div class="w-4 h-4 rounded-full animate-pulse bg-blue-500 delay-300"></div>
+                <span class="text-blue-700 font-semibold text-lg">جاري تحميل البيانات...</span>
+            </div>
+        </div>
+
+        <!-- شاشة تسجيل الدخول -->
+        <section id="auth-screen" class="bg-white p-8 rounded-xl shadow-2xl text-center flex flex-col items-center justify-center min-h-[50vh]" style="display: none;">
+            <h2 class="text-3xl font-bold mb-4 text-blue-700">مرحباً بك في واعى</h2>
+            <p class="text-gray-600 mb-8">يجب تسجيل الدخول باستخدام حساب جوجل للمتابعة والبدء في التحدي.</p>
+            <button id="google-signin-btn"
+                    class="flex items-center bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 transform hover:scale-[1.03]">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ml-3" viewBox="0 0 48 48">
+                    <path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.23 9.21 3.4l6.75-6.75C34.6 3.72 29.42 1.5 24 1.5c-9.57 0-18.06 5.48-22.31 13.5l7.66 5.92c1.86-5.46 7.15-9.42 14.65-9.42z"/>
+                    <path fill="#34A853" d="M46.7 24.5c0-.82-.14-1.63-.3-2.43H24v4.61h12.55c-.56 2.87-2.34 5.25-4.91 6.81l7.66 5.92c4.76-4.51 7.56-11.23 7.56-19.01z"/>
+                    <path fill="#FBBC05" d="M9.51 28.5c-.71-.58-1.42-1.6-1.42-2.5s-.35-2.07-.35-3.1v-4.61c0-1.03.11-2.07.35-3.1.07-.54.21-1.08.41-1.6L2.11 10.5C.95 13.88.29 17.65.29 21.5s.66 7.62 1.76 10.99l7.32-5.64z"/>
+                    <path fill="#EA4335" d="M24 47.5c6.45 0 11.91-2.13 15.8-5.8l-7.66-5.92c-2.1 1.45-4.9 2.33-8.14 2.33-6.61 0-12.27-4.43-14.2-10.42l-7.66 5.92c4.38 7.82 12.87 13.29 22.53 13.29z"/>
+                </svg>
+                تسجيل الدخول باستخدام جوجل
+            </button>
+        </section>
+
+        <!-- شاشة التعليمات والإقرار (Terms Modal) -->
+        <div id="terms-modal" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex items-center justify-center p-4 z-50 transition-opacity duration-300" style="display: none;">
+            <div class="bg-white p-6 sm:p-8 rounded-xl shadow-2xl max-w-lg w-full transform scale-100 border-t-8 border-red-600">
+                <h3 class="text-2xl font-extrabold mb-4 text-red-600 text-center">تعليمات وشروط استخدام "واعى"</h3>
+                <div class="text-gray-700 space-y-4 text-justify mb-6 overflow-y-auto max-h-80 pr-2">
+                    <p>هذا الموقع لمساعدتك على ضبط عاداتك السيئة، ويكون عن طريق تسجيل العادة وعدد الأيام والمبلغ الكلي الذي يقسم عليهم.</p>
+                    <p class="font-bold text-red-700">في حالة الانتكاس (اختيار "لقد وقعنا في الفخ"):</p>
+                    <ul class="list-disc list-inside space-y-1 text-sm mr-4">
+                        <li>سيتم **قفل الحساب مؤقتًا** ولن تتمكن من متابعة أي تحدٍ آخر.</li>
+                        <li>لإعادة فتح الحساب، يجب **إرسال المبلغ** المترتب عليك (المحسوب على أساس الأيام المتبقية من التحدي) إلى رقم المحفظة: <span class="font-mono bg-yellow-100 p-1 rounded">01094913839</span> (انستا باي أو فودافون كاش).</li>
+                        <li>يجب **التواصل** عبر تليجرام أو واتساب لإخطار المطور وإعادة فتح الحساب.</li>
+                        <li><span class="font-semibold text-blue-800">إقرار:</span> هذه الأموال يخصص جزء كبير منها للتطوير وجزء للتبرعات وجزء للمطور.</li>
+                    </ul>
+                    <p class="font-bold text-red-700">ملاحظة: إذا انتكست في أي عادة، يتم قفل الحساب عن جميع العادات الأخرى حتى يتم السداد وفتح الحساب.</p>
+                </div>
+
+                <!-- الإقرار الإجباري -->
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start">
+                        <input type="checkbox" id="commitment1" class="h-5 w-5 text-green-600 rounded mt-1 border-gray-300 focus:ring-green-500">
+                        <label for="commitment1" class="mr-3 text-gray-800 font-semibold flex-1">
+                            أتعهد أمام الله أني لن أزور ولن أغش نفسي في تسجيل العادات.
+                        </label>
+                    </div>
+                    <div class="flex items-start">
+                        <input type="checkbox" id="commitment2" class="h-5 w-5 text-green-600 rounded mt-1 border-gray-300 focus:ring-green-500">
+                        <label for="commitment2" class="mr-3 text-gray-800 font-semibold flex-1">
+                            أقر أني قرأت التعليمات كاملة وأوافق عليها.
+                        </label>
+                    </div>
+                </div>
+
+                <button id="accept-terms-btn" disabled
+                        class="w-full bg-gray-400 text-white font-bold py-3 rounded-lg shadow-md transition duration-200 cursor-not-allowed">
+                    أوافق وأبدأ التحدي
+                </button>
+            </div>
+        </div>
+        
+        <!-- شاشة الحساب المغلق -->
+        <div id="locked-screen" class="fixed inset-0 bg-red-900 bg-opacity-95 flex items-center justify-center p-4 z-50 transition-opacity duration-300" style="display: none;">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full text-center border-t-8 border-red-600">
+                <h3 class="text-3xl font-extrabold mb-4 text-red-600">❌ حسابك مُغلق!</h3>
+                <p class="text-lg text-gray-700 mb-6">لقد فشلت في تحدٍ ما. يرجى إكمال إجراءات السداد الموضحة في التعليمات الأصلية.</p>
+                <p class="text-sm text-gray-500 mb-6">سيتم إعادة فتح الحساب بعد تأكيد الدفع من قِبل المدير.</p>
+                <button onclick="auth.signOut();"
+                        class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg shadow-md transition duration-200">
+                    تسجيل الخروج
+                </button>
+            </div>
+        </div>
+
+        <!-- لوحة تحكم المدير (Admin Dashboard) -->
+        <section id="admin-dashboard" class="bg-gray-100 p-6 rounded-xl shadow-lg mb-8 border-t-4 border-purple-500" style="display: none;">
+            <h2 class="text-3xl font-extrabold text-purple-800 mb-4">لوحة تحكم المدير</h2>
+            <p class="mb-4 text-gray-600">إدارة حالات قفل المستخدمين.</p>
+            <div id="users-list" class="space-y-3">
+                <p class="text-center text-gray-500">جاري تحميل المستخدمين...</p>
+            </div>
+        </section>
+
+        <!-- المحتوى الرئيسي للمستخدمين العاديين -->
+        <div id="main-content" style="display: none;">
+            
+            <!-- زر تبديل إظهار/إخفاء إضافة عادة -->
+            <div id="toggle-add-habit-container" class="mb-4" style="display: none;">
+                <button id="toggle-add-habit-btn"
+                        class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200">
+                    ➕ إضافة تحدي جديد (إظهار)
+                </button>
+            </div>
+
+            <!-- إضافة عادة جديدة (قابلة للإخفاء) -->
+            <section id="add-habit-section" class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-green-500">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">إضافة عادة جديدة لضبط النفس</h2>
+                <form id="add-habit-form" class="space-y-4">
+                    <div>
+                        <label for="habitName" class="block text-sm font-medium text-gray-700">اسم الشيء/العادة المراد إيقافها:</label>
+                        <input type="text" id="habitName" name="habitName" required
+                               class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="totalAmount" class="block text-sm font-medium text-gray-700">المبلغ الإجمالي للعقوبة (ج.م):</label>
+                            <input type="number" id="totalAmount" name="totalAmount" required min="1"
+                                   class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150">
+                        </div>
+                        <div>
+                            <label for="totalDays" class="block text-sm font-medium text-gray-700">عدد الأيام المطلوبة للالتزام:</label>
+                            <input type="number" id="totalDays" name="totalDays" required min="1"
+                                   class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-green-500 focus:border-green-500 transition duration-150">
+                        </div>
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200 transform hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        ابدأ تحدي جديد
+                    </button>
+                </form>
+            </section>
+
+            <!-- قائمة العادات النشطة -->
+            <section>
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">تحدياتك الحالية (<span id="active-habits-count">0</span>)</h2>
+                <div id="habits-list" class="space-y-4">
+                    <!-- سيتم عرض العادات النشطة هنا -->
+                    <p id="no-habits-message" class="text-center text-gray-500 p-8 bg-white rounded-xl shadow-lg">
+                        لا توجد تحديات نشطة حالياً. ابدأ تحديك الأول!
+                    </p>
+                </div>
+            </section>
+        </div>
+        
+        <!-- رسالة الخطأ/التنبيه (modal replacement) -->
+        <div id="message-box" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+            <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-transform duration-300 scale-95">
+                <h3 id="message-title" class="text-xl font-bold mb-3 text-red-600">خطأ</h3>
+                <p id="message-content" class="text-gray-700 mb-4">حدث خطأ ما.</p>
+                <button onclick="closeMessageBox()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-lg">حسناً</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ===============================================
+        // تهيئة Firebase والمتغيرات العالمية
+        // ===============================================
+        setLogLevel('Debug');
+        
+        // معلومات المدير
+        const ADMIN_EMAIL = 'ahmedeisayounis@gmail.com';
+        let isAdmin = false;
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'waay-app';
+
+        // لو بتشغل الكود من Gemini أو بيئة بتوفر __firebase_config هيتستخدم تلقائياً
+        // لو هتشغّله من GitHub Pages أو سيرفر عادي، غيّر القيم جوّه firebaseConfig تحت بإعدادات مشروعك من Firebase Console
+        const fallbackFirebaseConfig = {
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
+            ? JSON.parse(__firebase_config)
+            : fallbackFirebaseConfig;
+
+        let app, db, auth;
+        let userId = null;
+        let userEmail = null;
+        let isAuthReady = false;
+        let isTermsAccepted = false;
+        let isAccountLocked = false;
+        let habitsRef = null;
+        let userStatusRef = null;
+        let publicStatusesRef = null;
+
+        // العناصر الرئيسية
+        const LOADING_STATE = document.getElementById('loading-state');
+        const AUTH_SCREEN = document.getElementById('auth-screen');
+        const TERMS_MODAL = document.getElementById('terms-modal');
+        const LOCKED_SCREEN = document.getElementById('locked-screen');
+        const MAIN_CONTENT = document.getElementById('main-content');
+        const ADMIN_DASHBOARD = document.getElementById('admin-dashboard');
+        const ADD_HABIT_SECTION = document.getElementById('add-habit-section');
+        const TOGGLE_BTN_CONTAINER = document.getElementById('toggle-add-habit-container');
+        const TOGGLE_ADD_HABIT_BTN = document.getElementById('toggle-add-habit-btn');
+        const HABITS_LIST = document.getElementById('habits-list');
+        const NO_HABITS_MESSAGE = document.getElementById('no-habits-message');
+        const ACTIVE_HABITS_COUNT = document.getElementById('active-habits-count');
+
+        // وظائف مساعدة
+        window.showMessageBox = (title, content, type = 'error') => {
+            const messageBox = document.getElementById('message-box');
+            document.getElementById('message-title').textContent = title;
+            document.getElementById('message-content').textContent = content;
+            document.getElementById('message-title').className = `text-xl font-bold mb-3 ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
+            messageBox.classList.remove('opacity-0', 'pointer-events-none');
+            messageBox.querySelector('div').classList.add('scale-100');
+            messageBox.querySelector('div').classList.remove('scale-95');
+        };
+
+        window.closeMessageBox = () => {
+            const messageBox = document.getElementById('message-box');
+            messageBox.classList.add('opacity-0', 'pointer-events-none');
+            messageBox.querySelector('div').classList.remove('scale-100');
+            messageBox.querySelector('div').classList.add('scale-95');
+        };
+
+        // تهيئة Firebase
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            window.auth = auth;
+            publicStatusesRef = collection(db, `artifacts/${appId}/public/data/user_statuses`);
+        } catch (error) {
+            console.error("Firebase Initialization Error:", error);
+            showMessageBox('خطأ في التهيئة', 'تعذر تهيئة Firebase. يرجى التحقق من إعدادات التطبيق.');
+        }
+
+        // ===============================================
+        // المصادقة والتوجيه
+        // ===============================================
+
+        const googleProvider = new GoogleAuthProvider();
+        document.getElementById('google-signin-btn').addEventListener('click', () => {
+            signInWithPopup(auth, googleProvider).catch(error => {
+                console.error("Google Sign-In Error:", error);
+                showMessageBox('خطأ في تسجيل الدخول', 'فشل تسجيل الدخول باستخدام جوجل. حاول مرة أخرى.');
+            });
+        });
+
+        onAuthStateChanged(auth, async (user) => {
+            LOADING_STATE.style.display = 'flex';
+            
+            if (user) {
+                userId = user.uid;
+                userEmail = user.email;
+                isAdmin = (userEmail === ADMIN_EMAIL);
+                
+                habitsRef = collection(db, `artifacts/${appId}/users/${userId}/habits`);
+                userStatusRef = doc(publicStatusesRef, userId);
+
+                // تهيئة/تحديث مستند حالة المستخدم
+                await setDoc(userStatusRef, { 
+                    email: userEmail, 
+                    lastLogin: Date.now(), 
+                    isLocked: false, // يتم تعيينها False افتراضياً عند أول تسجيل دخول
+                    isAdmin: isAdmin,
+                }, { merge: true });
+                
+                // الاستماع لحالة القفل وقبول الشروط
+                await setupUserStatusListener();
+
+            } else {
+                // إذا لم يكن المستخدم مسجلاً، أظهر شاشة تسجيل الدخول
+                displayScreen('auth');
+            }
+        });
+        
+        async function setupUserStatusListener() {
+            if (!userStatusRef) return;
+
+            onSnapshot(userStatusRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const statusData = docSnap.data();
+                    isTermsAccepted = statusData.isTermsAccepted || false;
+                    isAccountLocked = statusData.isLocked || false;
+                } else {
+                    // إذا لم يكن هناك مستند، فافترض أن الشروط غير مقبولة وأن الحساب غير مغلق بعد
+                    isTermsAccepted = false;
+                    isAccountLocked = false;
+                }
+                isAuthReady = true;
+                routeApp(); // أعِد التوجيه بناءً على الحالة الجديدة
+            }, (error) => {
+                console.error("Error listening to user status:", error);
+                // إذا فشل الاستماع، افترض عدم قبول الشروط لتجنب عرض المحتوى
+                isTermsAccepted = false;
+                isAuthReady = true;
+                routeApp();
+            });
+        }
+
+        // دالة التوجيه الرئيسية
+        function routeApp() {
+            LOADING_STATE.style.display = 'none';
+
+            if (!isAuthReady) return;
+
+            if (isAdmin) {
+                displayScreen('admin');
+                loadAllUserStatuses();
+            } else if (isAccountLocked) {
+                displayScreen('locked');
+            } else if (!isTermsAccepted) {
+                displayScreen('terms');
+            } else {
+                displayScreen('main');
+                loadHabits();
+            }
+        }
+
+        // دالة إخفاء وإظهار الشاشات
+        function displayScreen(screenName) {
+            AUTH_SCREEN.style.display = 'none';
+            TERMS_MODAL.style.display = 'none';
+            LOCKED_SCREEN.style.display = 'none';
+            ADMIN_DASHBOARD.style.display = 'none';
+            MAIN_CONTENT.style.display = 'none';
+
+            if (screenName === 'auth') AUTH_SCREEN.style.display = 'flex';
+            if (screenName === 'terms') TERMS_MODAL.style.display = 'flex';
+            if (screenName === 'locked') LOCKED_SCREEN.style.display = 'flex';
+            if (screenName === 'admin') ADMIN_DASHBOARD.style.display = 'block';
+            if (screenName === 'main') MAIN_CONTENT.style.display = 'block';
+        }
+
+        // ===============================================
+        // منطق قبول الشروط
+        // ===============================================
+        const commitment1 = document.getElementById('commitment1');
+        const commitment2 = document.getElementById('commitment2');
+        const acceptBtn = document.getElementById('accept-terms-btn');
+
+        [commitment1, commitment2].forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const canAccept = commitment1.checked && commitment2.checked;
+                acceptBtn.disabled = !canAccept;
+                acceptBtn.className = canAccept 
+                    ? 'w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow-md transition duration-200' 
+                    : 'w-full bg-gray-400 text-white font-bold py-3 rounded-lg shadow-md transition duration-200 cursor-not-allowed';
+            });
+        });
+
+        acceptBtn.addEventListener('click', async () => {
+            if (commitment1.checked && commitment2.checked) {
+                try {
+                    await updateDoc(userStatusRef, { isTermsAccepted: true });
+                    // التوجيه سيتم بواسطة onSnapshot
+                } catch (error) {
+                    console.error("Error accepting terms:", error);
+                    showMessageBox('خطأ', 'فشل حفظ موافقتك على الشروط.');
+                }
+            }
+        });
+
+        // ===============================================
+        // وظائف لوحة تحكم المدير
+        // ===============================================
+
+        function loadAllUserStatuses() {
+            if (!isAdmin || !publicStatusesRef) return;
+
+            onSnapshot(publicStatusesRef, (snapshot) => {
+                const users = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.email !== ADMIN_EMAIL) { // استثناء المدير من القائمة
+                        users.push({ id: doc.id, ...data });
+                    }
+                });
+                renderAdminDashboard(users);
+            }, (error) => {
+                console.error("Error loading user statuses:", error);
+                showMessageBox('خطأ في التحميل', 'تعذر تحميل حالات المستخدمين.');
+            });
+        }
+
+        async function toggleLockStatus(targetUserId, isLocked) {
+            if (!isAdmin) return;
+            const targetDocRef = doc(publicStatusesRef, targetUserId);
+            try {
+                await updateDoc(targetDocRef, { isLocked: isLocked });
+                showMessageBox('نجاح', `تم ${isLocked ? 'قفل' : 'فتح'} حساب المستخدم بنجاح.`, 'success');
+            } catch (error) {
+                console.error("Error toggling lock:", error);
+                showMessageBox('خطأ', `فشل في تحديث حالة القفل للمستخدم.`);
+            }
+        }
+
+        function renderAdminDashboard(users) {
+            const usersList = document.getElementById('users-list');
+            usersList.innerHTML = '';
+            
+            if (users.length === 0) {
+                usersList.innerHTML = '<p class="text-center text-gray-500">لا يوجد مستخدمون لعرضهم.</p>';
+                return;
+            }
+
+            users.sort((a, b) => b.isLocked - a.isLocked); // عرض المقفلين أولاً
+
+            users.forEach(user => {
+                const isLocked = user.isLocked;
+                const lockClass = isLocked ? 'bg-red-100 border-red-400' : 'bg-green-100 border-green-400';
+                const buttonText = isLocked ? 'فتح الحساب' : 'قفل الحساب';
+                const buttonColor = isLocked ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+                
+                const userCard = document.createElement('div');
+                userCard.className = `flex justify-between items-center p-4 rounded-lg shadow-md border-r-8 ${lockClass}`;
+                userCard.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-lg text-gray-800 truncate">${user.email}</p>
+                        <p class="text-xs text-gray-500 truncate">ID: ${user.id}</p>
+                        <p class="text-sm font-semibold mt-1 ${isLocked ? 'text-red-600' : 'text-green-600'}">الحالة: ${isLocked ? 'مُغلق 🔒' : 'مفتوح'}</p>
+                    </div>
+                    <button onclick="toggleLockStatus('${user.id}', ${!isLocked})"
+                            class="mr-4 px-4 py-2 text-white font-semibold rounded-lg transition duration-200 ${buttonColor}">
+                        ${buttonText}
+                    </button>
+                `;
+                usersList.appendChild(userCard);
+            });
+        }
+
+        window.toggleLockStatus = toggleLockStatus; // إتاحة الدالة للاستخدام في HTML
+
+        // ===============================================
+        // وظائف إدارة العادات (للمستخدم العادي)
+        // ===============================================
+        
+        // دالة تبديل إظهار/إخفاء قسم إضافة عادة
+        let isAddHabitSectionVisible = true;
+        TOGGLE_ADD_HABIT_BTN.addEventListener('click', () => {
+            isAddHabitSectionVisible = !isAddHabitSectionVisible;
+            ADD_HABIT_SECTION.style.display = isAddHabitSectionVisible ? 'block' : 'none';
+            TOGGLE_ADD_HABIT_BTN.textContent = isAddHabitSectionVisible 
+                ? '➖ إضافة تحدي جديد (إخفاء)' 
+                : '➕ إضافة تحدي جديد (إظهار)';
+        });
+
+        // دالة حساب العقوبة
+        function calculatePenalty(habit) {
+            const daysToPay = habit.totalDays - habit.daysCompleted;
+            const dailyPenalty = habit.totalAmount / habit.totalDays;
+            const penalty = dailyPenalty * daysToPay;
+            return parseFloat(penalty.toFixed(2));
+        }
+
+        // إضافة عادة جديدة
+        document.getElementById('add-habit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isAuthReady || !habitsRef || isAccountLocked) return;
+
+            const name = document.getElementById('habitName').value.trim();
+            const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+            const totalDays = parseInt(document.getElementById('totalDays').value);
+
+            if (!name || totalAmount <= 0 || totalDays <= 0) {
+                showMessageBox('بيانات غير صالحة', 'الرجاء إدخال اسم العادة والمبالغ والأيام بشكل صحيح.', 'error');
+                return;
+            }
+
+            const dailyPenalty = totalAmount / totalDays;
+
+            const newHabit = {
+                name,
+                totalAmount,
+                totalDays,
+                dailyPenalty: parseFloat(dailyPenalty.toFixed(2)),
+                startDate: Date.now(),
+                daysCompleted: 0,
+                currentStatus: 'active',
+                lastCheckInDate: 0,
+            };
+
+            try {
+                await addDoc(habitsRef, newHabit);
+                showMessageBox('نجاح', `تمت إضافة تحدي "${name}" بنجاح!`, 'success');
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adding habit:", error);
+                showMessageBox('خطأ في الحفظ', 'حدث خطأ أثناء إضافة التحدي إلى قاعدة البيانات.', 'error');
+            }
+        });
+
+        /**
+         * منطق تسجيل الدخول اليومي (نجاح/فشل)
+         */
+        async function processCheckIn(habitId, isSuccess, habitData) {
+             if (!isAuthReady || !habitsRef || isAccountLocked) {
+                 showMessageBox('تنبيه', 'حسابك مغلق أو غير جاهز حالياً.', 'error');
+                 return;
+             }
+             
+             const habitDocRef = doc(db, `artifacts/${appId}/users/${userId}/habits/${habitId}`);
+             const today = new Date();
+             const todayTimestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+
+             // التحقق من تكرار تسجيل الدخول في نفس اليوم
+             if (habitData.lastCheckInDate) {
+                 const lastCheckInDay = new Date(habitData.lastCheckInDate);
+                 const lastCheckInTimestamp = new Date(lastCheckInDay.getFullYear(), lastCheckInDay.getMonth(), lastCheckInDay.getDate()).getTime();
+                 
+                 if (lastCheckInTimestamp === todayTimestamp) {
+                     showMessageBox('تحدي اليوم', 'لقد سجلت حالة هذا التحدي بالفعل لهذا اليوم!', 'error');
+                     return;
+                 }
+             }
+             
+             let updateData = { lastCheckInDate: Date.now() };
+
+             if (isSuccess) {
+                 // حالة النجاح
+                 const newDaysCompleted = habitData.daysCompleted + 1;
+                 updateData.daysCompleted = newDaysCompleted;
+
+                 if (newDaysCompleted >= habitData.totalDays) {
+                    // إكمال التحدي بالكامل
+                    updateData.currentStatus = 'completed';
+                    showMessageBox('تهانينا!', `لقد أكملت تحدي "${habitData.name}" بالكامل!`, 'success');
+                 } else {
+                    showMessageBox('ممتاز!', `أحسنت! تم تسجيل يوم جديد لـ "${habitData.name}".`, 'success');
+                 }
+
+             } else {
+                 // حالة الفشل: قفل الحساب وبدء دورة جديدة
+                 const penalty = calculatePenalty(habitData);
+
+                 // 1. قفل حساب المستخدم في الحالة العامة
+                 await updateDoc(userStatusRef, { 
+                     isLocked: true, 
+                     lastFailureDate: Date.now(), 
+                     lastFailurePenalty: penalty.toFixed(2) 
+                 });
+
+                 // 2. تحديث التحدي الفاشل لبدء دورة جديدة (تصفير عداد الأيام)
+                 updateData = {
+                     currentStatus: 'active',
+                     daysCompleted: 0, 
+                     startDate: Date.now(), // بدء دورة جديدة
+                     lastCheckInDate: Date.now()
+                 };
+
+                 // يجب إظهار رسالة تفيد بالقفل والمبلغ المطلوب
+                 showMessageBox('لقد وقعنا في الفخ!', 
+                     `❌ فشلت في تحدي "${habitData.name}". العقوبة: ${penalty.toFixed(2)} ج.م. تم **قفل حسابك بالكامل**. يرجى السداد والتواصل مع المدير لفتحه.`, 
+                     'error'
+                 );
+                 // سيتم التوجيه إلى شاشة القفل بواسطة onSnapshot
+             }
+
+             try {
+                 await updateDoc(habitDocRef, updateData);
+             } catch (error) {
+                 console.error("Error processing check-in:", error);
+                 showMessageBox('خطأ في التحديث', 'تعذر تحديث حالة التحدي.', 'error');
+             }
+
+        }
+
+        /**
+         * تتبع التغييرات في العادات وعرضها
+         */
+        function loadHabits() {
+            if (!isAuthReady || !habitsRef) return;
+
+            onSnapshot(habitsRef, (snapshot) => {
+                const habits = [];
+                snapshot.forEach(doc => {
+                    habits.push({ id: doc.id, ...doc.data() });
+                });
+                renderHabits(habits);
+            }, (error) => {
+                console.error("Error loading habits:", error);
+                showMessageBox('خطأ في التحميل', 'تعذر تحميل قائمة تحدياتك.', 'error');
+            });
+        }
+        
+        /**
+         * عرض قائمة العادات في الواجهة
+         */
+        function renderHabits(habits) {
+            const activeHabits = habits.filter(h => h.currentStatus !== 'completed');
+            HABITS_LIST.innerHTML = '';
+            ACTIVE_HABITS_COUNT.textContent = activeHabits.length;
+
+            if (activeHabits.length > 0) {
+                NO_HABITS_MESSAGE.style.display = 'none';
+                TOGGLE_BTN_CONTAINER.style.display = 'block'; // أظهر زر الطي
+            } else {
+                NO_HABITS_MESSAGE.style.display = 'block';
+                TOGGLE_BTN_CONTAINER.style.display = 'none'; // إخفاء زر الطي إن لم يكن هناك عادات
+                ADD_HABIT_SECTION.style.display = 'block'; // إذا لا توجد عادات، ابق قسم الإضافة ظاهراً
+                isAddHabitSectionVisible = true;
+                TOGGLE_ADD_HABIT_BTN.textContent = '➖ إضافة تحدي جديد (إخفاء)';
+            }
+
+
+            activeHabits.forEach(habit => {
+                const daysLeft = habit.totalDays - habit.daysCompleted;
+                const progressPercentage = (habit.daysCompleted / habit.totalDays) * 100;
+                const penaltyAmount = calculatePenalty(habit);
+
+                // التحقق من إمكانية تسجيل الدخول اليوم (يوم واحد فقط في اليوم)
+                const lastCheckInDate = habit.lastCheckInDate ? new Date(habit.lastCheckInDate) : null;
+                const today = new Date();
+                const todayTimestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+                const canCheckIn = !lastCheckInDate || (new Date(lastCheckInDate.getFullYear(), lastCheckInDate.getMonth(), lastCheckInDate.getDate()).getTime() !== todayTimestamp);
+
+                const card = `
+                    <div class="bg-white p-6 rounded-xl shadow-md border-r-8 border-blue-600 transition duration-300 hover:shadow-lg">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-2xl font-bold text-gray-900">${habit.name}</h3>
+                            <span class="text-sm font-semibold text-blue-600 bg-blue-100 px-3 py-1 rounded-full">${habit.totalDays} يوم</span>
+                        </div>
+                        
+                        <!-- المبلغ المترتب عند الفشل اليوم -->
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-6">
+                            <p class="text-red-700 font-semibold text-center">
+                                العقوبة الحالية عند الفشل: <span class="text-xl font-extrabold">${penaltyAmount.toFixed(2)} ج.م</span>
+                            </p>
+                        </div>
+
+                        <!-- حالة التقدم -->
+                        <div class="mb-4">
+                            <p class="text-lg font-semibold text-gray-700 mb-1">التقدم: <span class="text-blue-600">${habit.daysCompleted} / ${habit.totalDays} يوماً</span></p>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: ${progressPercentage}%"></div>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">الأيام المتبقية: ${daysLeft}</p>
+                        </div>
+                        
+                        <!-- خيارات تسجيل الدخول اليومي -->
+                        <div class="flex space-x-2 space-x-reverse ${canCheckIn && !isAccountLocked ? '' : 'opacity-60 pointer-events-none'}" id="check-in-btns-${habit.id}">
+                            <button onclick="processCheckIn('${habit.id}', true, ${JSON.stringify(habit).replace(/"/g, '&quot;')})"
+                                class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200 transform hover:scale-[1.01] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                تم بفضل الله
+                            </button>
+                            <button onclick="processCheckIn('${habit.id}', false, ${JSON.stringify(habit).replace(/"/g, '&quot;')})"
+                                class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200 transform hover:scale-[1.01] flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                لقد وقعنا في الفخ
+                            </button>
+                        </div>
+                        ${!canCheckIn ? `<p class="text-center text-sm text-yellow-600 bg-yellow-100 p-2 mt-4 rounded-lg">تم تسجيل حالة اليوم بالفعل. عد غداً!</p>` : ''}
+                    </div>
+                `;
+                HABITS_LIST.insertAdjacentHTML('beforeend', card);
+            });
+        }
+        
+        // إتاحة الدوال العالمية للوصول إليها من HTML
+        window.processCheckIn = processCheckIn;
+        window.auth = auth;
+    </script>
+</body>
+</html>
