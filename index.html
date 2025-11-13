@@ -102,9 +102,7 @@
 <p class="text-sm text-gray-500 mb-6">
                     سيتم إعادة فتح الحساب بعد التأكد من الدفع من قِبل الإدارة.
                 </p>
-<button class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 rounded-lg shadow-md transition duration-200" onclick="auth.signOut();">
-                    تسجيل الخروج
-                </button>
+
 </div>
 </div>
 <!-- لوحة تحكم المدير (Admin Dashboard) -->
@@ -118,13 +116,19 @@
 <!-- المحتوى الرئيسي للمستخدمين العاديين -->
 <div id="main-content" style="display: none;">
 <!-- زر تبديل إظهار/إخفاء إضافة عادة -->
-<div class="mb-4" id="toggle-add-habit-container" style="display: none;">
-<button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-200" id="toggle-add-habit-btn">
-                    ➕ إضافة تحدي جديد (إظهار)
-                </button>
-</div>
+
 <!-- إضافة عادة جديدة (قابلة للإخفاء) -->
-<section class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-green-500" id="add-habit-section">
+
+<!-- قائمة العادات النشطة -->
+<section>
+<h2 class="text-2xl font-bold text-gray-800 mb-4">تحدياتك الحالية (<span id="active-habits-count">0</span>)</h2>
+<div class="space-y-4" id="habits-list">
+<!-- سيتم عرض العادات النشطة هنا -->
+<p class="text-center text-gray-500 p-8 bg-white rounded-xl shadow-lg" id="no-habits-message">
+                        لا توجد تحديات نشطة حالياً. ابدأ تحديك الأول!
+                    </p>
+</div>
+</section><section class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-green-500" id="add-habit-section">
 <h2 class="text-2xl font-bold text-gray-800 mb-4">إضافة عادة جديدة لضبط النفس</h2>
 <form class="space-y-4" id="add-habit-form">
 <div>
@@ -146,17 +150,7 @@
                     </button>
 </form>
 </section>
-<!-- قائمة العادات النشطة -->
-<section>
-<h2 class="text-2xl font-bold text-gray-800 mb-4">تحدياتك الحالية (<span id="active-habits-count">0</span>)</h2>
-<div class="space-y-4" id="habits-list">
-<!-- سيتم عرض العادات النشطة هنا -->
-<p class="text-center text-gray-500 p-8 bg-white rounded-xl shadow-lg" id="no-habits-message">
-                        لا توجد تحديات نشطة حالياً. ابدأ تحديك الأول!
-                    </p>
-</div>
-</section>
-</div>
+<footer class="mt-8 text-center text-gray-600 text-sm" id="completed-habits-footer"><span>عدد التحديات المكتملة: </span><span class="font-bold text-green-700" id="completed-habits-count">0</span></footer><button class="hidden fixed bottom-4 left-4 bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 text-3xl flex items-center justify-center shadow-xl" id="floating-add-habit-btn" type="button">+</button></div>
 <!-- رسالة الخطأ/التنبيه (modal replacement) -->
 <div class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none" id="message-box">
 <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition-transform duration-300 scale-95">
@@ -170,7 +164,7 @@
 <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ===============================================
         // تهيئة Firebase والمتغيرات العالمية
@@ -212,14 +206,15 @@
 
         // العناصر الرئيسية
         const LOADING_STATE = document.getElementById('loading-state');
+        const COMPLETED_HABITS_COUNT = document.getElementById('completed-habits-count');
+        const FLOATING_ADD_HABIT_BTN = document.getElementById('floating-add-habit-btn');
+
         const AUTH_SCREEN = document.getElementById('auth-screen');
         const TERMS_MODAL = document.getElementById('terms-modal');
         const LOCKED_SCREEN = document.getElementById('locked-screen');
         const MAIN_CONTENT = document.getElementById('main-content');
         const ADMIN_DASHBOARD = document.getElementById('admin-dashboard');
         const ADD_HABIT_SECTION = document.getElementById('add-habit-section');
-        const TOGGLE_BTN_CONTAINER = document.getElementById('toggle-add-habit-container');
-        const TOGGLE_ADD_HABIT_BTN = document.getElementById('toggle-add-habit-btn');
         const HABITS_LIST = document.getElementById('habits-list');
         const NO_HABITS_MESSAGE = document.getElementById('no-habits-message');
         const ACTIVE_HABITS_COUNT = document.getElementById('active-habits-count');
@@ -464,15 +459,16 @@
         // وظائف إدارة العادات (للمستخدم العادي)
         // ===============================================
         
-        // دالة تبديل إظهار/إخفاء قسم إضافة عادة
-        let isAddHabitSectionVisible = true;
-        TOGGLE_ADD_HABIT_BTN.addEventListener('click', () => {
-            isAddHabitSectionVisible = !isAddHabitSectionVisible;
-            ADD_HABIT_SECTION.style.display = isAddHabitSectionVisible ? 'block' : 'none';
-            TOGGLE_ADD_HABIT_BTN.textContent = isAddHabitSectionVisible 
-                ? '➖ إضافة تحدي جديد (إخفاء)' 
-                : '➕ إضافة تحدي جديد (إظهار)';
-        });
+        // زر إضافة تحدي (زر عائم في الأسفل)
+        let isAddHabitSectionVisible = false;
+        if (FLOATING_ADD_HABIT_BTN) {
+            FLOATING_ADD_HABIT_BTN.addEventListener('click', () => {
+                isAddHabitSectionVisible = !isAddHabitSectionVisible;
+                if (ADD_HABIT_SECTION) {
+                    ADD_HABIT_SECTION.style.display = isAddHabitSectionVisible ? 'block' : 'none';
+                }
+            });
+        }
 
         // دالة حساب العقوبة
         function calculatePenalty(habit) {
@@ -612,6 +608,21 @@
             });
         }
         
+        // حذف تحدي (إزالة الرغبة)
+        async function deleteHabit(habitId, habitName) {
+            if (!habitsRef || !habitId) return;
+            const confirmDelete = confirm(`هل أنت متأكد من حذف التحدي: "${habitName}"؟`);
+            if (!confirmDelete) return;
+            try {
+                const habitDocRef = doc(db, `artifacts/${appId}/users/${userId}/habits/${habitId}`);
+                await deleteDoc(habitDocRef);
+                showMessageBox('تم الحذف', `تم حذف التحدي "${habitName}" بنجاح.`, 'success');
+            } catch (error) {
+                console.error("Error deleting habit:", error);
+                showMessageBox('خطأ', 'فشل حذف التحدي. حاول مرة أخرى.', 'error');
+            }
+        }
+
         /**
          * عرض قائمة العادات في الواجهة
          */
@@ -620,15 +631,23 @@
             HABITS_LIST.innerHTML = '';
             ACTIVE_HABITS_COUNT.textContent = activeHabits.length;
 
+            // التحكم في ظهور نموذج إضافة التحدي والزر العائم
             if (activeHabits.length > 0) {
                 NO_HABITS_MESSAGE.style.display = 'none';
-                TOGGLE_BTN_CONTAINER.style.display = 'block'; // أظهر زر الطي
+                if (FLOATING_ADD_HABIT_BTN) FLOATING_ADD_HABIT_BTN.classList.remove('hidden');
+                if (ADD_HABIT_SECTION) ADD_HABIT_SECTION.style.display = 'none';
+                isAddHabitSectionVisible = false;
             } else {
                 NO_HABITS_MESSAGE.style.display = 'block';
-                TOGGLE_BTN_CONTAINER.style.display = 'none'; // إخفاء زر الطي إن لم يكن هناك عادات
-                ADD_HABIT_SECTION.style.display = 'block'; // إذا لا توجد عادات، ابق قسم الإضافة ظاهراً
+                if (FLOATING_ADD_HABIT_BTN) FLOATING_ADD_HABIT_BTN.classList.add('hidden');
+                if (ADD_HABIT_SECTION) ADD_HABIT_SECTION.style.display = 'block';
                 isAddHabitSectionVisible = true;
-                TOGGLE_ADD_HABIT_BTN.textContent = '➖ إضافة تحدي جديد (إخفاء)';
+            }
+
+            // عداد التحديات المكتملة
+            const completedHabits = habits.filter(h => h.currentStatus === 'completed');
+            if (COMPLETED_HABITS_COUNT) {
+                COMPLETED_HABITS_COUNT.textContent = completedHabits.length;
             }
 
 
@@ -684,6 +703,13 @@
                             </button>
                         </div>
                         ${!canCheckIn ? `<p class="text-center text-sm text-yellow-600 bg-yellow-100 p-2 mt-4 rounded-lg">تم تسجيل حالة اليوم بالفعل. عد غداً!</p>` : ''}
+                        
+                        <!-- زر إزالة الرغبة (حذف التحدي) -->
+                        <button
+                            onclick="deleteHabit('${habit.id}', '${habit.name.replace("'", "\'")}')"
+                            class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center">
+                            🗑️ إزالة الرغبة (حذف التحدي)
+                        </button>
                     </div>
                 `;
                 HABITS_LIST.insertAdjacentHTML('beforeend', card);
@@ -692,6 +718,7 @@
         
         // إتاحة الدوال العالمية للوصول إليها من HTML
         window.processCheckIn = processCheckIn;
+        window.deleteHabit = deleteHabit;
         window.auth = auth;
     </script>
 </body>
