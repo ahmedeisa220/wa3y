@@ -193,15 +193,18 @@
         // لو بتشغل الكود من Gemini أو بيئة بتوفر __firebase_config هيتستخدم تلقائياً
         // لو هتشغّله من GitHub Pages أو سيرفر عادي، غيّر القيم جوّه firebaseConfig تحت بإعدادات مشروعك من Firebase Console
         const fallbackFirebaseConfig = {
-            apiKey: "YOUR_API_KEY_HERE",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyC77XE5AdXNjFOH8_Tru8gJHAgvX8e5wa8",
+            authDomain: "wa3y-ae.firebaseapp.com",
+            projectId: "wa3y-ae",
+            storageBucket: "wa3y-ae.firebasestorage.app",
+            messagingSenderId: "817049173456",
+            appId: "1:817049173456:web:9db994a3e7e8d01374cdd5",
+            measurementId: "G-R6T777R13K"
         };
 
-        const firebaseConfig = {"apiKey": "AIzaSyC77XE5AdXNjFOH8_Tru8gJHAgvX8e5wa8", "authDomain": "wa3y-ae.firebaseapp.com", "projectId": "wa3y-ae", "storageBucket": "wa3y-ae.firebasestorage.app", "messagingSenderId": "817049173456", "appId": "1:817049173456:web:9db994a3e7e8d01374cdd5", "measurementId": "G-R6T777R13K"};
+        const firebaseConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
+            ? JSON.parse(__firebase_config)
+            : fallbackFirebaseConfig;
 
         let app, db, auth;
         let userId = null;
@@ -265,7 +268,8 @@
         document.getElementById('google-signin-btn').addEventListener('click', () => {
             signInWithPopup(auth, googleProvider).catch(error => {
                 console.error("Google Sign-In Error:", error);
-                showMessageBox('خطأ في تسجيل الدخول', 'فشل تسجيل الدخول باستخدام جوجل. حاول مرة أخرى.');
+                const msg = `فشل تسجيل الدخول باستخدام جوجل.\n\nالكود: ${error.code || 'غير معروف'}\nالرسالة: ${error.message || ''}`;
+                showMessageBox('خطأ في تسجيل الدخول', msg);
             });
         });
 
