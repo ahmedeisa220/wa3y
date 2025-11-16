@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel - AE Academy API</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 900px; margin: 30px auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1, h2 { color: #5e35b1; text-align: center; margin-bottom: 25px; }
+        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; }
+        input[type="text"], input[type="email"], input[type="password"] { width: calc(100% - 22px); padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #673ab7; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin-right: 10px; transition: background-color 0.3s ease; }
+        button:hover { background-color: #5e35b1; }
+        button.delete { background-color: #d32f2f; } button.delete:hover { background-color: #b71c1c; }
+        pre { background-color: #eee; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        #response { margin-top: 20px; padding: 15px; border-radius: 5px; min-height: 50px; }
+        .success { background-color: #e8f5e9; border-color: #4caf50; color: #388e3c; }
+        .error { background-color: #ffebee; border-color: #f44336; color: #d32f2f; }
+        .loading { background-color: #e3f2fd; border-color: #2196f3; color: #1976d2; }
+        .user-list { border-top: 1px solid #eee; margin-top: 20px; padding-top: 20px; }
+        .user-item { padding: 8px 0; border-bottom: 1px dashed #eee; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+        .user-item:last-child { border-bottom: none; }
+        .muted { font-size: 0.9em; color: #666; }
+        .user-actions button { padding: 6px 10px; font-size: 0.85em; margin-left: 6px; }
+        .row { display:flex; gap:10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>AE Academy Admin Panel</h1>
+    <p style="text-align:center;color:#666;">إدارة المستخدمين والأجهزة</p>
+
+    <div class="section">
+        <h2>Admin Credentials</h2>
+        <input type="password" id="adminKey" value="aYBsKx_Lfdw3Wz9r" placeholder="Admin API Key">
+        <p class="muted">هذا المفتاح تم تعيينه تلقائياً. لا تشاركه أبداً.</p>
+    </div>
+
+    <div class="section">
+        <h2>Reset Device / Delete User</h2>
+        <div class="row">
+            <input type="email" id="userEmail" placeholder="أدخل البريد الإلكتروني للمستخدم">
+            <button onclick="resetDevice()">إعادة تعيين الجهاز</button>
+            <button class="delete" onclick="deleteUser()">حذف المستخدم</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>List All Users</h2>
+        <button onclick="listUsers()">عرض كل المستخدمين</button>
+        <div id="userListDisplay" class="user-list"></div>
+    </div>
+
+    <div id="response" class="response">
+        <h3>API Response:</h3>
+        <pre id="responsePre"></pre>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://91.99.142.244:8000"; // عدّلها لو السيرفر اتغيّر
+    const responseDiv = document.getElementById('responsePre');
+    const responseBox = document.getElementById('response');
+    const userListDisplay = document.getElementById('userListDisplay');
+
+    function trimLowerEmail(v){ return (v||'').trim().toLowerCase(); }
+
+    async function sendRequest(endpoint, method, data = null) {
+        const adminKey = document.getElementById('adminKey').value;
+        responseDiv.textContent = 'جاري المعالجة...';
+        responseBox.className = 'response loading';
+        userListDisplay.innerHTML = '';
+
+        try {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-API-Key': adminKey
+                }
+            };
+            if (data) { options.body = JSON.stringify(data); }
+
+            const res = await fetch(`${API_URL}${endpoint}`, options);
+            let resultText = await res.text();
+            let result;
+            try { result = JSON.parse(resultText); } catch(e) { result = resultText; }
+
+            if (res.ok) {
+                responseDiv.textContent = (typeof result === 'string') ? result : JSON.stringify(result, null, 2);
+                responseBox.className = 'response success';
+                return result;
+            } else {
+                responseDiv.textContent = `خطأ (${res.status}): ${(typeof result === 'string') ? result : JSON.stringify(result, null, 2)}`;
+                responseBox.className = 'response error';
+                return null;
+            }
+        } catch (e) {
+            responseDiv.textContent = `خطأ في الشبكة: ${e.message}`;
+            responseBox.className = 'response error';
+            return null;
+        }
+    }
+
+    async function resetDevice() {
+        const email = trimLowerEmail(document.getElementById('userEmail').value);
+        if (!email) return alert("من فضلك أدخل البريد الإلكتروني للمستخدم.");
+        await sendRequest('/admin/reset_device', 'POST', { email });
+        listUsers();
+    }
+
+    async function deleteUser() {
+        const email = trimLowerEmail(document.getElementById('userEmail').value);
+        if (!email) return alert("من فضلك أدخل البريد الإلكتروني للمستخدم.");
+        if (!confirm(`هل أنت متأكد أنك تريد حذف المستخدم ${email}؟ هذا الإجراء لا يمكن التراجع عنه.`)) return;
+        await sendRequest(`/admin/users/${encodeURIComponent(email)}`, 'DELETE');
+        listUsers();
+    }
+
+    function safe(val) { return (val === undefined || val === null) ? 'N/A' : String(val); }
+
+    async function listUsers() {
+        const result = await sendRequest('/admin/users', 'GET');
+        if (result && result.users) {
+            userListDisplay.innerHTML = '';
+            if (result.users.length === 0) {
+                userListDisplay.textContent = 'لا يوجد مستخدمون مسجلون حتى الآن.';
+            } else {
+                result.users.forEach(user => {
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `
+                        <div>
+                            <div><strong>${safe(user.email)}</strong></div>
+                            <div class="muted">Device ID: ${safe(user.device_id)}</div>
+                            <div class="muted">Password: ${safe(user.password)}</div>
+                            <div class="muted">Shadow: ${safe(user.password_shadow)}</div>
+                            <div class="muted">Registered: ${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</div>
+                        </div>
+                        <div class="user-actions">
+                            <button onclick="document.getElementById('userEmail').value='${safe(user.email)}'; resetDevice()">Reset Device</button>
+                            <button class="delete" onclick="document.getElementById('userEmail').value='${safe(user.email)}'; deleteUser()">Delete</button>
+                        </div>`;
+                    userListDisplay.appendChild(div);
+                });
+                // طالما عرضنا المستخدمين فوق، خليه يكتب true بالاخضر
+                responseDiv.textContent = 'true';
+                responseBox.className = 'response success';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', listUsers);
+</script>
+</body>
+</html>
